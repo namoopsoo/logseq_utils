@@ -15,7 +15,6 @@ def get_block(block_uuid):
       "args": [block_uuid, 
                {"includeChildren": True}]
     }
-    # "args": ["Test page", "This is a new block", {"isPageBlock": true}]}
     response = requests.post(url, json=payload, headers=headers)
     return response
 
@@ -88,6 +87,7 @@ def build_markdown_from_page_blocks(blocks, level_offset=0):
 
     return stuff
 
+
 def build_markdown(page_name, target_loc):
     response = get_page(page_name)
     assert response.status_code == 200 and response.json()
@@ -118,4 +118,3 @@ def build_markdown(page_name, target_loc):
     assert path.parent.is_dir()
 
     path.write_text("\n".join(text))
-    ...
