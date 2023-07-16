@@ -3,6 +3,7 @@ import re
 import os
 import time
 from pathlib import Path
+from datetime import datetime
 
 
 def get_block(block_uuid):
@@ -90,19 +91,25 @@ def build_markdown_from_page_blocks(blocks, level_offset=0):
 
 def build_markdown(page_name, target_loc):
     response = get_page(page_name)
-    assert response.status_code == 200 and response.json()
+    assert response.status_code == 200 and response.json(), response.json()
 
     response = get_page_blocks_tree(page_name)
-    assert response.status_code == 200 and response.json()
+    assert response.status_code == 200 and response.json(), response.json()
     blocks = response.json()
 
-    blog_date = blocks[0]["properties"]["blogDate"]
+    print("DEBUG,", blocks[0]["properties"])
+    blog_date = blocks[0]["properties"].get("blogdate")
+    print("blog_date", blog_date)
 
     stuff = build_markdown_from_page_blocks(blocks)
 
-    page_title = page_name.split("/")[1]  # 
+    page_title = page_name.split("/")[-1]  # 
     if match := re.match(r"(\d{4}-\d{2}-\d{2})-(.*)", page_title):
-        date_from_title, page_title = match.groups()
+        publish_date, page_title = match.groups()
+    elif blog_date:
+        publish_date = blog_date
+    else:
+        publish_date = datetime.today().strftime("%Y-%m-%d")
     print("page_title", page_title)
 
     page_title = page_title.replace("-", " ")
@@ -110,11 +117,22 @@ def build_markdown(page_name, target_loc):
 
     text = [
         "---",
-        f"date: {date_from_title}",
+        f"date: {publish_date}",
         f"title: {page_title}",
         "---",
     ] + [x["content"] for x in stuff]
     path = Path(target_loc)
     assert path.parent.is_dir()
 
-    path.write_text("\n".join(text))
+    out_text = "\n".join(text)
+
+    # Remove the "id:: 6488a947-a217-4062-bce9-cacfc9cb0336" embed strings .
+    cleaned_out = re.sub(
+        r"id:: [a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}",
+        "",
+        out_text)
+
+    path.write_text(cleaned_out)
+
+
+
