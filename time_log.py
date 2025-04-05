@@ -59,9 +59,25 @@ def extract_time_blocks(filepath):
                         'Start': start_dt.time(),
                         'End': end_dt.time(),
                         'Duration (mins)': round(duration.total_seconds() / 60),
-                        'Task': current_task
+                        'Task': current_task,
+                        'Tags': parse_tags_from_task(current_task),
                     })
     return rows
+
+def parse_tags_from_task(task_line):
+    if not task_line:
+        return []
+
+    tags = []
+
+    # Match [[tag with spaces]]
+    tags += re.findall(r"\[\[([^\]]+)\]\]", task_line)
+
+    # Match #tag (without brackets)
+    tags += re.findall(r"#([a-zA-Z0-9/_\-]+)", task_line)
+
+    return tags
+
 
 def write_csv(rows, output_file):
     if not rows:
