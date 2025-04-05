@@ -3,6 +3,7 @@ import csv
 import argparse
 from datetime import datetime
 from pathlib import Path
+import polars as pl
 
 import argparse
 
@@ -78,18 +79,6 @@ def parse_tags_from_task(task_line):
 
     return tags
 
-
-def write_csv(rows, output_file):
-    if not rows:
-        print("No entries found.")
-        return
-    with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['Date', 'Start', 'End', 'Duration (mins)', 'Task']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-
-
 def iterate_across_journals(journals_dir, pattern):
     out_vec = []
     for input_md_file in Path(journals_dir).glob(pattern):
@@ -110,11 +99,4 @@ if __name__ == '__main__':
 
     out_vec = iterate_across_journals(journals_dir, pattern)
 
-    import ipdb; ipdb.set_trace()
-
-    """
-        output_csv_file = 'logseq_time_report.csv'
-        write_csv(parsed_rows, output_csv_file)
-        print(f"Report written to {output_csv_file}")
-    """
-
+    df = pl.from_dicts(out_vec)
