@@ -57,36 +57,73 @@ def process_markdown(src_md: Path, dst_journals: Path, dst_assets: Path) -> None
     dst_file.write_text(new_text)
 
 
+def cmd_process_images(args: argparse.Namespace) -> None:
+    """Process markdown files replacing embedded images."""
+    input_dir = Path(args.input_dir)
+    output_dir = Path(args.output_dir)
+    journals_dir = output_dir / "journals"
+    assets_dir = output_dir / "assets"
+    journals_dir.mkdir(parents=True, exist_ok=True)
+    assets_dir.mkdir(parents=True, exist_ok=True)
+
+    for md in sorted(input_dir.glob("*.md")):
+        process_markdown(md, journals_dir, assets_dir)
+
+
+def cmd_longdown(args: argparse.Namespace) -> None:
+    """Run longdown on markdown files."""
+    input_dir = Path(args.input_dir)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    md_files = [p.name for p in sorted(input_dir.glob("*.md"))]
+    if md_files:
+        cmd = ["longdown", "-d", str(output_dir)] + md_files
+        subprocess.run(cmd, check=True, cwd=input_dir)
+
+
+def cmd_append_to_logseq(args: argparse.Namespace) -> None:
+    """Append markdown files to existing Logseq files."""
+    input_dir = Path(args.input_dir)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for src_md in sorted(input_dir.glob("*.md")):
+        dst_md = output_dir / src_md.name
+        append_text = src_md.read_text()
+        if dst_md.exists():
+            existing = dst_md.read_text()
+        else:
+            existing = ""
+        with dst_md.open("a", encoding="utf-8") as fh:
+            if existing and not existing.endswith("\n"):
+                fh.write("\n")
+            fh.write("- from the apple notes exporter app\n")
+            fh.write(append_text)
+            if not append_text.endswith("\n"):
+                fh.write("\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Import notes into Logseq")
-    parser.add_argument("--input-folder", required=True, help="Folder containing markdown files")
-    parser.add_argument("--prefix", default="", help="Optional filename prefix filter")
-    parser.add_argument("--intermediary-dir-one", required=True, help="First intermediary directory")
-    parser.add_argument("--intermediary-dir-two", required=True, help="Second intermediary directory")
-    parser.add_argument("--dry-run", action="store_true", help="Print files without processing")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    proc_parser = subparsers.add_parser("process-images", help="Replace embedded images with local assets")
+    proc_parser.add_argument("--input-dir", required=True, help="Directory containing markdown files")
+    proc_parser.add_argument("--output-dir", required=True, help="Directory for processed journals and assets")
+    proc_parser.set_defaults(func=cmd_process_images)
+
+    longdown_parser = subparsers.add_parser("longdown", help="Run longdown on markdown files")
+    longdown_parser.add_argument("--input-dir", required=True, help="Directory with markdown files")
+    longdown_parser.add_argument("--output-dir", required=True, help="Directory for longdown output")
+    longdown_parser.set_defaults(func=cmd_longdown)
+
+    append_parser = subparsers.add_parser("append-to-logseq", help="Append markdown to existing Logseq files")
+    append_parser.add_argument("--input-dir", required=True, help="Directory containing markdown files to append")
+    append_parser.add_argument("--output-dir", required=True, help="Directory with existing Logseq files")
+    append_parser.set_defaults(func=cmd_append_to_logseq)
+
     args = parser.parse_args()
-
-    input_path = Path(args.input_folder)
-    md_files = sorted(p for p in input_path.glob("*.md") if not args.prefix or p.name.startswith(args.prefix))
-
-    if args.dry_run:
-        for p in md_files:
-            print(p)
-        return
-
-    journals_dir_one = Path(args.intermediary_dir_one) / "journals"
-    assets_dir_one = Path(args.intermediary_dir_one) / "assets"
-    journals_dir_two = Path(args.intermediary_dir_two) / "journals"
-    journals_dir_one.mkdir(parents=True, exist_ok=True)
-    assets_dir_one.mkdir(parents=True, exist_ok=True)
-    journals_dir_two.mkdir(parents=True, exist_ok=True)
-
-    for md in md_files:
-        process_markdown(md, journals_dir_one, assets_dir_one)
-
-    md_files = [p.name for p in journals_dir_one.glob("*.md")]
-    cmd = ["longdown", "-d", str(journals_dir_two)] + md_files
-    subprocess.run(cmd, check=True, cwd=journals_dir_one)
+    args.func(args)
 
 
 if __name__ == "__main__":
