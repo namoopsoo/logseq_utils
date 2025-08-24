@@ -84,8 +84,9 @@ def main() -> None:
     for md in md_files:
         process_markdown(md, journals_dir_one, assets_dir_one)
 
-    cmd = ["longdown", "-d", str(journals_dir_two)] + [str(p) for p in journals_dir_one.glob("*.md")]
-    subprocess.run(cmd, check=True)
+    md_files = [p.name for p in journals_dir_one.glob("*.md")]
+    cmd = ["longdown", "-d", str(journals_dir_two)] + md_files
+    subprocess.run(cmd, check=True, cwd=journals_dir_one)
 
 
 if __name__ == "__main__":
