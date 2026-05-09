@@ -93,10 +93,13 @@ def cmd_append_to_logseq(args: argparse.Namespace) -> None:
     logseq_assets_dir.mkdir(parents=True, exist_ok=True)
 
     for src_md in sorted(input_dir.glob("*.md")):
-        if not re.fullmatch(r"\d{4}_\d{2}_\d{2}\.md", src_md.name):
-            raise ValueError(f"Expected journal filename format YYYY_MM_DD.md, got: {src_md.name}")
+        match = re.match(r"^(\d{4})-(\d{2})-(\d{2})", src_md.stem)
+        if not match:
+            print(f"Not processed (filename does not start with yyyy-mm-dd): {src_md.name}")
+            continue
 
-        dst_md = journals_dir / src_md.name
+        yyyy, mm, dd = match.groups()
+        dst_md = journals_dir / f"{yyyy}_{mm}_{dd}.md"
         append_text = src_md.read_text()
         if dst_md.exists():
             existing = dst_md.read_text()
