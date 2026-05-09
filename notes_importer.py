@@ -82,18 +82,30 @@ def cmd_longdown(args: argparse.Namespace) -> None:
 
 
 def cmd_append_to_logseq(args: argparse.Namespace) -> None:
-    """Append markdown files to existing Logseq files."""
+    """Append markdown files and assets into a Logseq directory."""
     input_dir = Path(args.input_dir)
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    assets_dir = Path(args.assets_dir)
+    logseq_dir = Path(args.logseq_dir)
+
+    journals_dir = logseq_dir / "journals"
+    logseq_assets_dir = logseq_dir / "assets"
+    journals_dir.mkdir(parents=True, exist_ok=True)
+    logseq_assets_dir.mkdir(parents=True, exist_ok=True)
 
     for src_md in sorted(input_dir.glob("*.md")):
-        dst_md = output_dir / src_md.name
+        match = re.match(r"^(\d{4})-(\d{2})-(\d{2})", src_md.stem)
+        if not match:
+            print(f"Not processed (filename does not start with yyyy-mm-dd): {src_md.name}")
+            continue
+
+        yyyy, mm, dd = match.groups()
+        dst_md = journals_dir / f"{yyyy}_{mm}_{dd}.md"
         append_text = src_md.read_text()
         if dst_md.exists():
             existing = dst_md.read_text()
         else:
             existing = ""
+
         with dst_md.open("a", encoding="utf-8") as fh:
             if existing and not existing.endswith("\n"):
                 fh.write("\n")
@@ -101,6 +113,11 @@ def cmd_append_to_logseq(args: argparse.Namespace) -> None:
             fh.write(append_text)
             if not append_text.endswith("\n"):
                 fh.write("\n")
+
+    if assets_dir.exists():
+        for asset in sorted(assets_dir.iterdir()):
+            if asset.is_file():
+                shutil.copy2(asset, logseq_assets_dir / asset.name)
 
 
 def main() -> None:
@@ -117,9 +134,10 @@ def main() -> None:
     longdown_parser.add_argument("--output-dir", required=True, help="Directory for longdown output")
     longdown_parser.set_defaults(func=cmd_longdown)
 
-    append_parser = subparsers.add_parser("append-to-logseq", help="Append markdown to existing Logseq files")
+    append_parser = subparsers.add_parser("append-to-logseq", help="Append markdown and assets into a Logseq directory")
     append_parser.add_argument("--input-dir", required=True, help="Directory containing markdown files to append")
-    append_parser.add_argument("--output-dir", required=True, help="Directory with existing Logseq files")
+    append_parser.add_argument("--logseq-dir", required=True, help="Root Logseq directory")
+    append_parser.add_argument("--assets-dir", required=True, help="Directory containing assets to copy")
     append_parser.set_defaults(func=cmd_append_to_logseq)
 
     args = parser.parse_args()
