@@ -12,7 +12,8 @@ Usage:
 notes_dir=xxxx
 step1_dir=xxxx
 step2_dir=xxxx
-logseq_journals=xxxx
+logseq_dir=xxxx
+source_assets_dir=${step1_dir}/assets
 
 python notes_importer.py process-images \
   --input-dir $notes_dir --output-dir $step1_dir
@@ -22,7 +23,9 @@ python notes_importer.py longdown \
   --output-dir $step2_dir
 
 python notes_importer.py append-to-logseq \
-  --input-dir $step2_dir --output-dir $logseq_journals
+  --input-dir $step2_dir \
+  --logseq-dir $logseq_dir \
+  --assets-dir $source_assets_dir
 
 ```
 
