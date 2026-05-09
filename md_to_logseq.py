@@ -8,77 +8,43 @@ HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 
 
 def md_to_logseq_outline(markdown: str, indent: str = "  ") -> str:
-    """
-    Convert simple longform Markdown into Logseq-style outline Markdown.
-
-    Rules:
-    - Headings become bullets.
-    - Heading level controls nesting.
-    - Paragraphs nest under the current heading.
-    - Consecutive non-empty non-heading lines are joined into one paragraph.
-    - Fenced code blocks are preserved as one nested block.
-    """
-    lines = markdown.splitlines()
-    out: list[str] = []
-    paragraph: list[str] = []
+    out = []
     current_heading_level = 0
-
     in_code = False
-    code_lines: list[str] = []
+    code_level = 0
 
-    def emit_paragraph() -> None:
-        nonlocal paragraph
-        if paragraph:
-            text = " ".join(line.strip() for line in paragraph)
-            level = current_heading_level + 1 if current_heading_level else 0
-            out.append(f"{indent * level}- {text}")
-            paragraph = []
-
-    def emit_code() -> None:
-        nonlocal code_lines
-        if code_lines:
-            level = current_heading_level + 1 if current_heading_level else 0
-            out.append(f"{indent * level}- {code_lines[0]}")
-            for line in code_lines[1:]:
-                out.append(f"{indent * (level + 1)}{line}")
-            code_lines = []
-
-    for raw in lines:
+    for raw in markdown.splitlines():
         line = raw.rstrip()
 
+        if not line.strip():
+            continue
+
+        # fenced code block
         if line.startswith("```"):
-            if in_code:
-                code_lines.append(line)
-                in_code = False
-                emit_code()
-            else:
-                emit_paragraph()
+            if not in_code:
                 in_code = True
-                code_lines = [line]
+                code_level = current_heading_level + 1 if current_heading_level else 0
+                out.append(f"{indent * code_level}- {line}")
+            else:
+                out.append(f"{indent * (code_level + 1)}{line}")
+                in_code = False
             continue
 
         if in_code:
-            code_lines.append(line)
-            continue
-
-        if not line.strip():
-            emit_paragraph()
+            out.append(f"{indent * (code_level + 1)}{line}")
             continue
 
         match = HEADING_RE.match(line)
         if match:
-            emit_paragraph()
             hashes, title = match.groups()
             current_heading_level = len(hashes)
             out.append(f"{indent * (current_heading_level - 1)}- {hashes} {title}")
         else:
-            paragraph.append(line)
-
-    emit_paragraph()
-    if in_code:
-        emit_code()
+            level = current_heading_level + 1 if current_heading_level else 0
+            out.append(f"{indent * level}- {line.strip()}")
 
     return "\n".join(out) + ("\n" if out else "")
+
 
 
 def convert_file(src: str | Path, dst: str | Path | None = None) -> None:

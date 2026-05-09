@@ -6,6 +6,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from md_to_logseq import convert_file
+
+
 
 def find_matching_attachment(attachments_dir: Path, data_hash: str) -> Path | None:
     """Return the attachment file in ``attachments_dir`` matching ``data_hash``.
@@ -76,9 +79,13 @@ def cmd_longdown(args: argparse.Namespace) -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     md_files = [p.name for p in sorted(input_dir.glob("*.md"))]
-    if md_files:
-        cmd = ["longdown", "-d", str(output_dir)] + md_files
-        subprocess.run(cmd, check=True, cwd=input_dir)
+    for md_file in md_files:
+
+        source_path = md_file
+
+        destination_path = str(Path(output_dir) / md_file)
+
+        convert_file(source_path, destination_path)
 
 
 def cmd_append_to_logseq(args: argparse.Namespace) -> None:
