@@ -127,6 +127,35 @@ def cmd_append_to_logseq(args: argparse.Namespace) -> None:
                 shutil.copy2(asset, logseq_assets_dir / asset.name)
 
 
+def cmd_auto(args: argparse.Namespace) -> None:
+    """Run the full import pipeline: process-images -> longdown -> append-to-logseq."""
+    input_dir = Path(args.input_dir)
+    staging_dir = Path(args.staging_dir)
+    logseq_dir = Path(args.logseq_dir)
+
+    cmd_process_images(
+        argparse.Namespace(
+            input_dir=str(input_dir),
+            output_dir=str(staging_dir),
+        )
+    )
+
+    cmd_longdown(
+        argparse.Namespace(
+            input_dir=str(staging_dir / "processed_markdown"),
+            output_dir=str(staging_dir / "longdown"),
+        )
+    )
+
+    cmd_append_to_logseq(
+        argparse.Namespace(
+            input_dir=str(staging_dir / "longdown"),
+            logseq_dir=str(logseq_dir),
+            assets_dir=str(staging_dir / "assets"),
+        )
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Import notes into Logseq")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -146,6 +175,15 @@ def main() -> None:
     append_parser.add_argument("--logseq-dir", required=True, help="Root Logseq directory")
     append_parser.add_argument("--assets-dir", required=True, help="Directory containing assets to copy")
     append_parser.set_defaults(func=cmd_append_to_logseq)
+
+    auto_parser = subparsers.add_parser(
+        "auto",
+        help="Run process-images, longdown, and append-to-logseq in sequence",
+    )
+    auto_parser.add_argument("--input-dir", required=True, help="Directory containing markdown files")
+    auto_parser.add_argument("--logseq-dir", required=True, help="Root Logseq directory")
+    auto_parser.add_argument("--staging-dir", required=True, help="Directory used for intermediate output")
+    auto_parser.set_defaults(func=cmd_auto)
 
     args = parser.parse_args()
     args.func(args)
