@@ -64,7 +64,7 @@ def cmd_process_images(args: argparse.Namespace) -> None:
     """Process markdown files replacing embedded images."""
     input_dir = Path(args.input_dir)
     output_dir = Path(args.output_dir)
-    journals_dir = output_dir / "journals"
+    journals_dir = output_dir / "processed_markdown"
     assets_dir = output_dir / "assets"
     journals_dir.mkdir(parents=True, exist_ok=True)
     assets_dir.mkdir(parents=True, exist_ok=True)

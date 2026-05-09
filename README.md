@@ -10,22 +10,20 @@ Usage:
 
 ```sh
 notes_dir=xxxx
-step1_dir=xxxx
-step2_dir=xxxx
+staging_dir=xxxx
 logseq_dir=xxxx
-source_assets_dir=${step1_dir}/assets
 
 python notes_importer.py process-images \
-  --input-dir $notes_dir --output-dir $step1_dir
+  --input-dir $notes_dir --output-dir $staging_dir
 
 python notes_importer.py longdown \
-  --input-dir $step1_dir/journals \
-  --output-dir $step2_dir
+  --input-dir $staging_dir/processed_markdown \
+  --output-dir $staging_dir/longdown
 
 python notes_importer.py append-to-logseq \
-  --input-dir $step2_dir \
+  --input-dir $staging_dir/longdown \
   --logseq-dir $logseq_dir \
-  --assets-dir $source_assets_dir
+  --assets-dir ${staging_dir}/assets
 
 ```
 
