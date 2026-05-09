@@ -79,13 +79,13 @@ def cmd_longdown(args: argparse.Namespace) -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     md_files = [p.name for p in sorted(input_dir.glob("*.md"))]
+
     for md_file in md_files:
-
-        source_path = md_file
-
+        source_path = str(Path(input_dir) / md_file)
         destination_path = str(Path(output_dir) / md_file)
 
         convert_file(source_path, destination_path)
+    ...
 
 
 def cmd_append_to_logseq(args: argparse.Namespace) -> None:
@@ -116,7 +116,7 @@ def cmd_append_to_logseq(args: argparse.Namespace) -> None:
         with dst_md.open("a", encoding="utf-8") as fh:
             if existing and not existing.endswith("\n"):
                 fh.write("\n")
-            fh.write("- from the apple notes exporter app\n")
+            fh.write("- Imported below using [[app/Apple Notes Exporter]] and  [[logseq_utils/notes_importer.py]]\n")
             fh.write(append_text)
             if not append_text.endswith("\n"):
                 fh.write("\n")
