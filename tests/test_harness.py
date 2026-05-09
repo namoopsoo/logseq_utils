@@ -30,6 +30,10 @@ class TestNotesImporterAuto(unittest.TestCase):
         self.assertTrue((logseq_dir / "journals" / "2026_01_16.md").exists())
         self.assertTrue((logseq_dir / "assets" / "2026-01-15 note---inline-image.bin").exists())
 
+        # cleanup 
+        shutil.rmtree(logseq_dir)
+        shutil.rmtree(staging_dir)
+
 
 if __name__ == "__main__":
     unittest.main()
