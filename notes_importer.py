@@ -128,7 +128,6 @@ def cmd_append_to_logseq(args: argparse.Namespace) -> None:
         print(f"deleting {src_md.absolute().as_posix()}")
         src_md.unlink()
 
-    import ipdb; ipdb.set_trace()
     if assets_dir.exists():
         for asset in sorted(assets_dir.iterdir()):
             if asset.is_file():
