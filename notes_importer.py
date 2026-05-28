@@ -99,6 +99,9 @@ def cmd_append_to_logseq(args: argparse.Namespace) -> None:
     journals_dir.mkdir(parents=True, exist_ok=True)
     logseq_assets_dir.mkdir(parents=True, exist_ok=True)
 
+    # TODO Before proceeding, first gather what cannot be processed
+    # but should do that in an earlier step before doing anything actually.
+
     for src_md in sorted(input_dir.glob("*.md")):
         match = re.match(r"^(\d{4})-(\d{2})-(\d{2})", src_md.stem)
         if not match:
@@ -121,10 +124,21 @@ def cmd_append_to_logseq(args: argparse.Namespace) -> None:
             if not append_text.endswith("\n"):
                 fh.write("\n")
 
+        # Delete src_md after finishing with it 
+        print(f"deleting {src_md.absolute().as_posix()}")
+        src_md.unlink()
+
+    import ipdb; ipdb.set_trace()
     if assets_dir.exists():
         for asset in sorted(assets_dir.iterdir()):
             if asset.is_file():
                 shutil.copy2(asset, logseq_assets_dir / asset.name)
+
+                # unlink here too
+                print(f"deleting {asset.absolute().as_posix()}")
+                asset.unlink()
+                ...
+    ...
 
 
 def cmd_auto(args: argparse.Namespace) -> None:
