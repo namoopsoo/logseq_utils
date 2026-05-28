@@ -44,15 +44,59 @@ def process_markdown(src_md: Path, dst_journals: Path, dst_assets: Path) -> None
 
     pattern = re.compile(r'<img[^>]+src="data:image/[^;]+;base64,([^\"]+)"[^>]*/>')
 
+    def copy_or_convert_attachment(attachment: Path, asset_name_base: str) -> str:
+        """Copy ``attachment`` to assets, converting HEIC/HEIF files to JPEG.
+
+        Parameters
+        ----------
+        attachment
+            Source attachment path resolved from the Apple Notes attachments
+            directory.
+        asset_name_base
+            Base filename (without extension) to use for the destination asset
+            in ``dst_assets``.
+
+        Returns
+        -------
+        str
+            The destination asset filename (including extension) used in the
+            markdown image link.
+
+        Examples
+        --------
+        ``copy_or_convert_attachment(Path("photo.heic"), "2026-01-16---photo")``
+            Returns ``"2026-01-16---photo.jpeg"`` when conversion succeeds.
+
+        ``copy_or_convert_attachment(Path("scan.png"), "2026-01-16---scan")``
+            Returns ``"2026-01-16---scan.png"`` and copies the file as-is.
+        """
+        if attachment.suffix.lower() not in {".heic", ".heif"}:
+            asset_name = f"{asset_name_base}{attachment.suffix}"
+            shutil.copy2(attachment, dst_assets / asset_name)
+            return asset_name
+
+        asset_name = f"{asset_name_base}.jpeg"
+        asset_path = dst_assets / asset_name
+        try:
+            subprocess.run(
+                ["sips", "-s", "format", "jpeg", str(attachment), "--out", str(asset_path)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            fallback_name = f"{asset_name_base}{attachment.suffix}"
+            shutil.copy2(attachment, dst_assets / fallback_name)
+            return fallback_name
+        return asset_name
+
     def replace_img(match: re.Match) -> str:
         b64_data = match.group(1)
         img_bytes = base64.b64decode(b64_data)
         data_hash = hashlib.md5(img_bytes).hexdigest()
         attachment = find_matching_attachment(attachments_dir, data_hash)
         if attachment:
-            asset_name = f"{base_name}---{attachment.name}"
-            asset_path = dst_assets / asset_name
-            shutil.copy2(attachment, asset_path)
+            asset_name = copy_or_convert_attachment(attachment, f"{base_name}---{attachment.stem}")
             return f"![image.png](../assets/{asset_name})"
         return match.group(0)
 
