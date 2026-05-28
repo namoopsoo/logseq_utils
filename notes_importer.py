@@ -60,10 +60,10 @@ def process_markdown(src_md: Path, dst_journals: Path, dst_assets: Path) -> None
     dst_file.write_text(new_text)
 
 
-def cmd_process_images(args: argparse.Namespace) -> None:
+def cmd_process_images(input_dir: str | Path, output_dir: str | Path) -> None:
     """Process markdown files replacing embedded images."""
-    input_dir = Path(args.input_dir)
-    output_dir = Path(args.output_dir)
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
     journals_dir = output_dir / "processed_markdown"
     assets_dir = output_dir / "assets"
     journals_dir.mkdir(parents=True, exist_ok=True)
@@ -73,10 +73,10 @@ def cmd_process_images(args: argparse.Namespace) -> None:
         process_markdown(md, journals_dir, assets_dir)
 
 
-def cmd_longdown(args: argparse.Namespace) -> None:
+def cmd_longdown(input_dir: str | Path, output_dir: str | Path) -> None:
     """Run longdown on markdown files."""
-    input_dir = Path(args.input_dir)
-    output_dir = Path(args.output_dir)
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     md_files = [p.name for p in sorted(input_dir.glob("*.md"))]
 
@@ -88,11 +88,11 @@ def cmd_longdown(args: argparse.Namespace) -> None:
     ...
 
 
-def cmd_append_to_logseq(args: argparse.Namespace) -> None:
+def cmd_append_to_logseq(input_dir: str | Path, logseq_dir: str | Path, assets_dir: str | Path) -> None:
     """Append markdown files and assets into a Logseq directory."""
-    input_dir = Path(args.input_dir)
-    assets_dir = Path(args.assets_dir)
-    logseq_dir = Path(args.logseq_dir)
+    input_dir = Path(input_dir)
+    assets_dir = Path(assets_dir)
+    logseq_dir = Path(logseq_dir)
 
     journals_dir = logseq_dir / "journals"
     logseq_assets_dir = logseq_dir / "assets"
@@ -140,33 +140,17 @@ def cmd_append_to_logseq(args: argparse.Namespace) -> None:
     ...
 
 
-def cmd_auto(args: argparse.Namespace) -> None:
+def cmd_auto(input_dir: str | Path, staging_dir: str | Path, logseq_dir: str | Path) -> None:
     """Run the full import pipeline: process-images -> longdown -> append-to-logseq."""
-    input_dir = Path(args.input_dir)
-    staging_dir = Path(args.staging_dir)
-    logseq_dir = Path(args.logseq_dir)
+    input_dir = Path(input_dir)
+    staging_dir = Path(staging_dir)
+    logseq_dir = Path(logseq_dir)
 
-    cmd_process_images(
-        argparse.Namespace(
-            input_dir=str(input_dir),
-            output_dir=str(staging_dir),
-        )
-    )
+    cmd_process_images(input_dir, staging_dir)
 
-    cmd_longdown(
-        argparse.Namespace(
-            input_dir=str(staging_dir / "processed_markdown"),
-            output_dir=str(staging_dir / "longdown"),
-        )
-    )
+    cmd_longdown(staging_dir / "processed_markdown", staging_dir / "longdown")
 
-    cmd_append_to_logseq(
-        argparse.Namespace(
-            input_dir=str(staging_dir / "longdown"),
-            logseq_dir=str(logseq_dir),
-            assets_dir=str(staging_dir / "assets"),
-        )
-    )
+    cmd_append_to_logseq(staging_dir / "longdown", logseq_dir, staging_dir / "assets")
 
 
 def main() -> None:
@@ -176,18 +160,18 @@ def main() -> None:
     proc_parser = subparsers.add_parser("process-images", help="Replace embedded images with local assets")
     proc_parser.add_argument("--input-dir", required=True, help="Directory containing markdown files")
     proc_parser.add_argument("--output-dir", required=True, help="Directory for processed journals and assets")
-    proc_parser.set_defaults(func=cmd_process_images)
+    proc_parser.set_defaults(func=lambda args: cmd_process_images(args.input_dir, args.output_dir))
 
     longdown_parser = subparsers.add_parser("longdown", help="Run longdown on markdown files")
     longdown_parser.add_argument("--input-dir", required=True, help="Directory with markdown files")
     longdown_parser.add_argument("--output-dir", required=True, help="Directory for longdown output")
-    longdown_parser.set_defaults(func=cmd_longdown)
+    longdown_parser.set_defaults(func=lambda args: cmd_longdown(args.input_dir, args.output_dir))
 
     append_parser = subparsers.add_parser("append-to-logseq", help="Append markdown and assets into a Logseq directory")
     append_parser.add_argument("--input-dir", required=True, help="Directory containing markdown files to append")
     append_parser.add_argument("--logseq-dir", required=True, help="Root Logseq directory")
     append_parser.add_argument("--assets-dir", required=True, help="Directory containing assets to copy")
-    append_parser.set_defaults(func=cmd_append_to_logseq)
+    append_parser.set_defaults(func=lambda args: cmd_append_to_logseq(args.input_dir, args.logseq_dir, args.assets_dir))
 
     auto_parser = subparsers.add_parser(
         "auto",
@@ -196,7 +180,7 @@ def main() -> None:
     auto_parser.add_argument("--input-dir", required=True, help="Directory containing markdown files")
     auto_parser.add_argument("--logseq-dir", required=True, help="Root Logseq directory")
     auto_parser.add_argument("--staging-dir", required=True, help="Directory used for intermediate output")
-    auto_parser.set_defaults(func=cmd_auto)
+    auto_parser.set_defaults(func=lambda args: cmd_auto(args.input_dir, args.staging_dir, args.logseq_dir))
 
     args = parser.parse_args()
     args.func(args)
