@@ -104,3 +104,24 @@ def test_cmd_auto_chains_commands(monkeypatch) -> None:
     process_mock.assert_called_once_with(Path("/in"), Path("/staging"))
     longdown_mock.assert_called_once_with(Path("/staging/processed_markdown"), Path("/staging/longdown"))
     append_mock.assert_called_once_with(Path("/staging/longdown"), Path("/logseq"), Path("/staging/assets"))
+
+
+def test_process_markdown_converts_heic_attachment_to_jpeg(tmp_path: Path, monkeypatch) -> None:
+    src_md = tmp_path / "2026-01-16 note.md"
+    src_md.write_text('<img src="data:image/heic;base64,YWJj"/>')
+    attachments_dir = tmp_path / "2026-01-16 note Attachments"
+    attachments_dir.mkdir()
+    (attachments_dir / "inline-image.heic").write_bytes(b"abc")
+    dst_journals = tmp_path / "journals"
+    dst_assets = tmp_path / "assets"
+    dst_journals.mkdir()
+    dst_assets.mkdir()
+
+    run_mock = MagicMock()
+    monkeypatch.setattr(notes_importer.subprocess, "run", run_mock)
+
+    notes_importer.process_markdown(src_md, dst_journals, dst_assets)
+
+    output = (dst_journals / src_md.name).read_text()
+    assert "![image.png](../assets/2026-01-16 note---inline-image.jpeg)" in output
+    run_mock.assert_called_once()
