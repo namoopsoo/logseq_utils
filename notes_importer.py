@@ -45,6 +45,31 @@ def process_markdown(src_md: Path, dst_journals: Path, dst_assets: Path) -> None
     pattern = re.compile(r'<img[^>]+src="data:image/[^;]+;base64,([^\"]+)"[^>]*/>')
 
     def copy_or_convert_attachment(attachment: Path, asset_name_base: str) -> str:
+        """Copy ``attachment`` to assets, converting HEIC/HEIF files to JPEG.
+
+        Parameters
+        ----------
+        attachment
+            Source attachment path resolved from the Apple Notes attachments
+            directory.
+        asset_name_base
+            Base filename (without extension) to use for the destination asset
+            in ``dst_assets``.
+
+        Returns
+        -------
+        str
+            The destination asset filename (including extension) used in the
+            markdown image link.
+
+        Examples
+        --------
+        ``copy_or_convert_attachment(Path("photo.heic"), "2026-01-16---photo")``
+            Returns ``"2026-01-16---photo.jpeg"`` when conversion succeeds.
+
+        ``copy_or_convert_attachment(Path("scan.png"), "2026-01-16---scan")``
+            Returns ``"2026-01-16---scan.png"`` and copies the file as-is.
+        """
         if attachment.suffix.lower() not in {".heic", ".heif"}:
             asset_name = f"{asset_name_base}{attachment.suffix}"
             shutil.copy2(attachment, dst_assets / asset_name)
