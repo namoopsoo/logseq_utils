@@ -28,6 +28,60 @@ def find_matching_attachment(attachments_dir: Path, data_hash: str) -> Path | No
     return None
 
 
+def wrap_image_markdown_paths(text: str) -> str:
+    """Wrap markdown image destinations in angle brackets.
+
+    Markdown image links like ``![alt](../assets/file name (2).png)`` can
+    contain spaces and balanced parentheses in filenames. Logseq handles those
+    paths more reliably when the destination is enclosed in ``<`` and ``>``.
+    Already wrapped destinations are left unchanged.
+    """
+    output: list[str] = []
+    i = 0
+
+    while i < len(text):
+        image_start = text.find("![", i)
+        if image_start == -1:
+            output.append(text[i:])
+            break
+
+        output.append(text[i:image_start])
+        alt_end = text.find("](", image_start + 2)
+        if alt_end == -1:
+            output.append(text[image_start:])
+            break
+
+        path_start = alt_end + 2
+        depth = 0
+        path_end = path_start
+        while path_end < len(text):
+            char = text[path_end]
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                if depth == 0:
+                    break
+                depth -= 1
+            path_end += 1
+
+        if path_end == len(text):
+            output.append(text[image_start:])
+            break
+
+        path = text[path_start:path_end]
+        if path.startswith("<") and path.endswith(">"):
+            wrapped_path = path
+        else:
+            wrapped_path = f"<{path}>"
+
+        output.append(text[image_start:path_start])
+        output.append(wrapped_path)
+        output.append(")")
+        i = path_end + 1
+
+    return "".join(output)
+
+
 def process_markdown(src_md: Path, dst_journals: Path, dst_assets: Path) -> None:
     """Copy ``src_md`` to ``dst_journals`` and replace embedded images.
 
@@ -53,7 +107,7 @@ def process_markdown(src_md: Path, dst_journals: Path, dst_assets: Path) -> None
             asset_name = f"{base_name}---{attachment.name}"
             asset_path = dst_assets / asset_name
             shutil.copy2(attachment, asset_path)
-            return f"![image.png](../assets/{asset_name})"
+            return wrap_image_markdown_paths(f"![image.png](../assets/{asset_name})")
         return match.group(0)
 
     new_text = re.sub(pattern, replace_img, text)
