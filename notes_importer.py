@@ -28,58 +28,25 @@ def find_matching_attachment(attachments_dir: Path, data_hash: str) -> Path | No
     return None
 
 
+IMAGE_MARKDOWN_PATH_RE = re.compile(r"(!\[[^\]]*\]\()(<[^>]*>|(?:[^()]|\([^()]*\))*)(\))")
+
+
 def wrap_image_markdown_paths(text: str) -> str:
     """Wrap markdown image destinations in angle brackets.
 
     Markdown image links like ``![alt](../assets/file name (2).png)`` can
-    contain spaces and balanced parentheses in filenames. Logseq handles those
-    paths more reliably when the destination is enclosed in ``<`` and ``>``.
-    Already wrapped destinations are left unchanged.
+    contain spaces and parentheses in filenames. Logseq handles those paths more
+    reliably when the destination is enclosed in ``<`` and ``>``. Already
+    wrapped destinations are left unchanged.
     """
-    output: list[str] = []
-    i = 0
 
-    while i < len(text):
-        image_start = text.find("![", i)
-        if image_start == -1:
-            output.append(text[i:])
-            break
-
-        output.append(text[i:image_start])
-        alt_end = text.find("](", image_start + 2)
-        if alt_end == -1:
-            output.append(text[image_start:])
-            break
-
-        path_start = alt_end + 2
-        depth = 0
-        path_end = path_start
-        while path_end < len(text):
-            char = text[path_end]
-            if char == "(":
-                depth += 1
-            elif char == ")":
-                if depth == 0:
-                    break
-                depth -= 1
-            path_end += 1
-
-        if path_end == len(text):
-            output.append(text[image_start:])
-            break
-
-        path = text[path_start:path_end]
+    def wrap_path(match: re.Match) -> str:
+        prefix, path, suffix = match.groups()
         if path.startswith("<") and path.endswith(">"):
-            wrapped_path = path
-        else:
-            wrapped_path = f"<{path}>"
+            return match.group(0)
+        return f"{prefix}<{path}>{suffix}"
 
-        output.append(text[image_start:path_start])
-        output.append(wrapped_path)
-        output.append(")")
-        i = path_end + 1
-
-    return "".join(output)
+    return IMAGE_MARKDOWN_PATH_RE.sub(wrap_path, text)
 
 
 def process_markdown(src_md: Path, dst_journals: Path, dst_assets: Path) -> None:
