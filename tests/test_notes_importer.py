@@ -36,7 +36,7 @@ def test_process_markdown_replaces_embedded_image_and_copies_attachment(tmp_path
     notes_importer.process_markdown(src_md, dst_journals, dst_assets)
 
     output = (dst_journals / src_md.name).read_text()
-    assert "![image.png](../assets/2026-01-16 note---inline-image.bin)" in output
+    assert "![image.png](<../assets/2026-01-16 note---inline-image.bin>)" in output
     assert (dst_assets / "2026-01-16 note---inline-image.bin").exists()
 
 
@@ -104,3 +104,23 @@ def test_cmd_auto_chains_commands(monkeypatch) -> None:
     process_mock.assert_called_once_with(Path("/in"), Path("/staging"))
     longdown_mock.assert_called_once_with(Path("/staging/processed_markdown"), Path("/staging/longdown"))
     append_mock.assert_called_once_with(Path("/staging/longdown"), Path("/logseq"), Path("/staging/assets"))
+
+
+def test_wrap_image_markdown_paths_wraps_spaces_parentheses_and_plain_paths() -> None:
+    text = "\n".join([
+        "![image.png](../assets/some image with spaces.png)",
+        "![image.png](../assets/some other image okay (2).jpeg)",
+        "![image.png](../assets/blah-image-no-spaces-213.png)",
+    ])
+
+    assert notes_importer.wrap_image_markdown_paths(text) == "\n".join([
+        "![image.png](<../assets/some image with spaces.png>)",
+        "![image.png](<../assets/some other image okay (2).jpeg>)",
+        "![image.png](<../assets/blah-image-no-spaces-213.png>)",
+    ])
+
+
+def test_wrap_image_markdown_paths_leaves_already_wrapped_paths_unchanged() -> None:
+    text = "before ![image.png](<../assets/already wrapped (2).png>) after"
+
+    assert notes_importer.wrap_image_markdown_paths(text) == text

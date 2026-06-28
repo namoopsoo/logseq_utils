@@ -28,6 +28,27 @@ def find_matching_attachment(attachments_dir: Path, data_hash: str) -> Path | No
     return None
 
 
+IMAGE_MARKDOWN_PATH_RE = re.compile(r"(!\[[^\]]*\]\()(<[^>]*>|(?:[^()]|\([^()]*\))*)(\))")
+
+
+def wrap_image_markdown_paths(text: str) -> str:
+    """Wrap markdown image destinations in angle brackets.
+
+    Markdown image links like ``![alt](../assets/file name (2).png)`` can
+    contain spaces and parentheses in filenames. Logseq handles those paths more
+    reliably when the destination is enclosed in ``<`` and ``>``. Already
+    wrapped destinations are left unchanged.
+    """
+
+    def wrap_path(match: re.Match) -> str:
+        prefix, path, suffix = match.groups()
+        if path.startswith("<") and path.endswith(">"):
+            return match.group(0)
+        return f"{prefix}<{path}>{suffix}"
+
+    return IMAGE_MARKDOWN_PATH_RE.sub(wrap_path, text)
+
+
 def process_markdown(src_md: Path, dst_journals: Path, dst_assets: Path) -> None:
     """Copy ``src_md`` to ``dst_journals`` and replace embedded images.
 
@@ -53,7 +74,7 @@ def process_markdown(src_md: Path, dst_journals: Path, dst_assets: Path) -> None
             asset_name = f"{base_name}---{attachment.name}"
             asset_path = dst_assets / asset_name
             shutil.copy2(attachment, asset_path)
-            return f"![image.png](../assets/{asset_name})"
+            return wrap_image_markdown_paths(f"![image.png](../assets/{asset_name})")
         return match.group(0)
 
     new_text = re.sub(pattern, replace_img, text)
