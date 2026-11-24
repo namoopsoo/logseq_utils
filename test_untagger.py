@@ -68,6 +68,35 @@ def test_closing_fence_requires_matching_character_and_sufficient_length():
     assert convert_outside_fences(original) == (expected, 1, None)
 
 
+
+def test_more_typical_fenced_comment_example():
+    original = """
+```
+# defining some_func below
+def some_func(a) -> int: #returns int
+    # easy #sure
+    return a + 1  # add one
+    
+```
+
+#outside replaced yea. #because-code
+"""
+    expected = """
+```
+# defining some_func below
+def some_func(a) -> int: #returns int
+    # easy #sure
+    return a + 1  # add one
+    
+```
+
+[[outside]] replaced yea. [[because-code]]
+"""
+
+    assert convert_outside_fences(original) == (expected, 2, None)
+
+
+
 def test_preserve_tilde_fenced_code():
     original = "~~~sh\n#inside\n~~~\n#outside\n"
     expected = "~~~sh\n#inside\n~~~\n[[outside]]\n"
