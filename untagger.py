@@ -3,7 +3,10 @@ import re
 
 
 TAG = re.compile(
-    r"""(?<!\S)#([\w/-]+(?:\.[\w/-]+)*)(?=[,;.!?'":]*(?:\s|$))"""
+    r"""(?<!\S)#(?:"""
+    r"""(?P<bracketed>\[\[[^\[\]\r\n]+\]\])"""
+    r"""|(?P<bare>[\w/-]+(?:\.[\w/-]+)*)(?=[,;.!?'":]*(?:\s|$))"""
+    r")"
 )
 
 # Allow indentation and a Logseq list marker before an opening fence.
@@ -35,7 +38,10 @@ def convert_outside_fences(original: str) -> tuple[str, int, int | None]:
                 fence = match[1]
                 opened_at = line_number
             else:
-                line, n = TAG.subn(r"[[\1]]", line)
+                line, n = TAG.subn(
+                    lambda match: match["bracketed"] or f"[[{match['bare']}]]",
+                    line,
+                )
                 count += n
 
         output.append(line)

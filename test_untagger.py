@@ -13,8 +13,8 @@ from untagger import convert_outside_fences
             id="namespaces-domains-and-punctuation",
         ),
         pytest.param(
-            "# Heading\nhttps://example.com/#anchor #foo+bar #[[already bracketed]]",
-            "# Heading\nhttps://example.com/#anchor #foo+bar #[[already bracketed]]",
+            "# Heading\nhttps://example.com/#anchor #foo+bar",
+            "# Heading\nhttps://example.com/#anchor #foo+bar",
             0,
             id="leave-other-hash-syntax-alone",
         ),
@@ -77,4 +77,31 @@ def test_preserve_tilde_fenced_code():
 @pytest.mark.parametrize("tail", ["", "``` not a closing fence\n", "~~~\n"])
 def test_unclosed_fence_discards_even_edits_before_the_fence(tail):
     original = f"#before\n```python\n#inside\n{tail}"
+    assert convert_outside_fences(original) == (original, 0, 2)
+
+
+@pytest.mark.parametrize(
+    "original, expected, count",
+    [
+        ("#[[some foo]]", "[[some foo]]", 1),
+        ("#[[foo/bar]] #[[google.com]].", "[[foo/bar]] [[google.com]].", 2),
+        ("#[[some foo]], #bare", "[[some foo]], [[bare]]", 2),
+        ("#[[one]] #[[two words]]", "[[one]] [[two words]]", 2),
+        ("[[some foo]]", "[[some foo]]", 0),
+        ("#[[unfinished", "#[[unfinished", 0),
+        ("#[[foo #bar baz]]", "[[foo #bar baz]]", 1),
+    ],
+)
+def test_bracketed_tags(original, expected, count):
+    assert convert_outside_fences(original) == (expected, count, None)
+
+
+def test_bracketed_tags_inside_fences_are_preserved():
+    original = "#[[before]]\n```markdown\n#[[inside]] #inside\n```\n#[[after]]\n"
+    expected = "[[before]]\n```markdown\n#[[inside]] #inside\n```\n[[after]]\n"
+    assert convert_outside_fences(original) == (expected, 2, None)
+
+
+def test_unclosed_fence_cancels_bracketed_tag_conversion():
+    original = "#[[before]]\n```markdown\n#[[inside]]\n"
     assert convert_outside_fences(original) == (original, 0, 2)
